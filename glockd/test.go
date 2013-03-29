@@ -24,15 +24,37 @@ func client(tcpAddr *net.TCPAddr) (*net.TCPConn, error) {
 func lock_client(tcpAddr *net.TCPAddr) {
 	conn, err := client(tcpAddr)
 	err = err
+	var i int
 	locks_to_get := ( rand.Int() % 15 )
-	shared_to_get := ( rand.Int() % 15 )
 	reply := make([]byte, 2048)
-	for i:=1; i<=locks_to_get; i++ {
+	for i=0; i<=locks_to_get; i++ {
+		time.Sleep( time.Duration( time.Duration( rand.Int() % 30 ) * time.Millisecond ) )
 		_, err = conn.Write([]byte( fmt.Sprintf("g %d\n", ( rand.Int() % 1000 ) ) ))
 		_, err = conn.Read(reply)
 	}
-	for i:=1; i<=shared_to_get; i++ {
-		_, err = conn.Write([]byte( fmt.Sprintf("g %d\n", ( rand.Int() % 1000 ) ) ))
+	for i=0; i<=locks_to_get; i++ {
+		time.Sleep( time.Duration( time.Duration( rand.Int() % 1000 ) * time.Millisecond ) )
+		_, err = conn.Write([]byte( fmt.Sprintf("sg %d\n", ( rand.Int() % 1000 ) ) ))
+		_, err = conn.Read(reply)
+	}
+	for i=0; i<=locks_to_get; i++ {
+		time.Sleep( time.Duration( time.Duration( rand.Int() % 1000 ) * time.Millisecond ) )
+		_, err = conn.Write([]byte( fmt.Sprintf("i %d\n", ( rand.Int() % 1000 ) ) ))
+		_, err = conn.Read(reply)
+	}
+	for i=0; i<=locks_to_get; i++ {
+		time.Sleep( time.Duration( time.Duration( rand.Int() % 1000 ) * time.Millisecond ) )
+		_, err = conn.Write([]byte( fmt.Sprintf("si %d\n", ( rand.Int() % 1000 ) ) ))
+		_, err = conn.Read(reply)
+	}
+	for i=0; i<=locks_to_get; i++ {
+		time.Sleep( time.Duration( time.Duration( rand.Int() % 1000 ) * time.Millisecond ) )
+		_, err = conn.Write([]byte( fmt.Sprintf("r %d\n", ( rand.Int() % 1000 ) ) ))
+		_, err = conn.Read(reply)
+	}
+	for i=0; i<=locks_to_get; i++ {
+		time.Sleep( time.Duration( time.Duration( rand.Int() % 1000 ) * time.Millisecond ) )
+		_, err = conn.Write([]byte( fmt.Sprintf("sr %d\n", ( rand.Int() % 1000 ) ) ))
 		_, err = conn.Read(reply)
 	}
 	time.Sleep( time.Duration( rand.Int() % 30 ) * time.Second )
@@ -44,7 +66,7 @@ func stats_client(tcpAddr *net.TCPAddr) {
 	fmt.Printf( "stats_client %s\n", tcpAddr )
 	conn, err := client(tcpAddr)
 	err = err
-	reply := make([]byte, 1024)
+	reply := make([]byte, 2048)
 	replystring := ""
 	good := "cilso"
 	for true {
@@ -59,8 +81,10 @@ func stats_client(tcpAddr *net.TCPAddr) {
 			fmt.Printf( "ERROR GOT BAD RESPONSE: (%v) '%v'", err, replystring )
 			os.Exit(1)
 		}
-		fmt.Printf( "\n\n---\n%s\n---\n\n", string(reply) )
-		time.Sleep( time.Second )
+		print( "\033[2J" )
+		print( "\033[H" )
+		fmt.Printf( "%s", strings.Trim( string(reply), string(0) ) )
+		time.Sleep( time.Duration( 100 * time.Millisecond ) )
 	}
 	channel <- 1
 }
