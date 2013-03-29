@@ -9,6 +9,7 @@ import(
 	"flag"
 	"syscall"
 	"runtime"
+	"sort"
 )
 
 const (
@@ -36,10 +37,10 @@ type lock_reply struct {
 }
 
 // valid command list
-var commands = []string { "d", "sd","i", "si", "g", "sg", "r", "sr", "q" }
+var commands = []string { "d", "sd","i", "si", "g", "sg", "r", "sr", "q", "dump" }
 
 // stats bump channel and data structure
-var stats_channel = make(chan stat_bump, 1024)
+var stats_channel = make(chan stat_bump, 4096)
 var stats = map[string] int {
 	"command_d": 0,
 	"command_sd": 0,
@@ -50,20 +51,21 @@ var stats = map[string] int {
 	"command_r": 0,
 	"command_sr": 0,
 	"command_q": 0,
+	"command_dump": 0,
 	"connections": 0,
 	"locks": 0,
 	"shared_locks": 0,
 	"orphans": 0,
 	"shared_orphans": 0,
-	"invalid_comments": 0,
+	"invalid_commands": 0,
 }
 
 // Locks request channel and data structure
-var lock_channel = make(chan lock_request, 1024)
+var lock_channel = make(chan lock_request, 8192)
 var locks = map[string] string {}
 
 // Shared locks request channel and data structure
-var shared_lock_channel = make(chan lock_request, 1024)
+var shared_lock_channel = make(chan lock_request, 8192)
 var shared_locks = map[string] []string {}
 
 var cfg_port int
@@ -281,7 +283,7 @@ func is_valid_command( command string ) bool {
 
 func lock_req(lock string, action int, shared bool, my_client string) ( []byte, string ) {
 	// Create a channel on which the lock or shared lock goroutine can contact us back on
-	var reply_channel = make(chan lock_reply)
+	var reply_channel = make(chan lock_reply, 1)
 	// Send a non-blocking message to the proper goroutine about what we want
 	if shared {
 		shared_lock_channel <- lock_request{ lock:lock, action:action, reply:reply_channel, client:my_client }
@@ -336,6 +338,17 @@ func client_disconnected(my_client string, mylocks map[string] bool, myshared ma
 	// Nothing left to do... That's all the client had...
 }
 
+func stat_keys() []string {
+	mk := make([]string, len(stats))
+	i := 0
+	for k, _ := range stats {
+		mk[i] = k
+		i++
+	}
+	sort.Strings(mk)
+	return mk
+}
+
 func lock_client(conn net.Conn) {
 	// Lots of variables local to thie goroutine. Because: reasons
 	var command []string
@@ -368,9 +381,15 @@ func lock_client(conn net.Conn) {
 		command = strings.SplitN( strings.TrimSpace(string(buf)), " ", 2 )
 		if false == is_valid_command(command[0]) {
 			stats_channel <- stat_bump{ stat: "invalid_commands", val: 1 }
+			if cfg_verbose {
+				fmt.Printf( "%s invalid command '%s'", my_client, strings.Trim( string(buf), string(0) ) )
+			}
 			// if we got an invalid command, skip it
 			continue
 		}
+
+		// Always bump the command stats
+		stats_channel <- stat_bump{ stat: "command_"+command[0], val: 1 }
 
 		// We always want a lock, even if the lock is ""
 		if len(command) == 1 {
@@ -385,8 +404,16 @@ func lock_client(conn net.Conn) {
 			case "q":
 				// loop over stats and generated a response
 				rsp = []byte("")
-				for idx, val := range stats {
-					rsp = []byte( string(rsp) + fmt.Sprintf("%s: %d\n", idx, val) )
+				for _, idx := range stat_keys() {
+					switch idx {
+						case "locks":
+							rsp = []byte( string(rsp) + fmt.Sprintf("%s: %d\n", idx, len(locks)) )
+							continue
+						case "shared_locks":
+							rsp = []byte( string(rsp) + fmt.Sprintf("%s: %d\n", idx, len(shared_locks)) )
+							continue
+					}
+					rsp = []byte( string(rsp) + fmt.Sprintf("%s: %d\n", idx, stats[idx]) )
 				}
 			case "i":
 				// does the lock exist locally?
@@ -431,7 +458,7 @@ func lock_client(conn net.Conn) {
 				rsp, val = lock_req( lock, 0, true, my_client )
 			case "sg":
 				rsp, val = lock_req( lock, 1, true, my_client )
-				if val == "1" {
+				if val != "0" {
 					// Since we now have this lock... add it to the goroutine
 					// lock map.  Used for orphaning
 					myshared[lock] = true
@@ -465,13 +492,17 @@ func lock_client(conn net.Conn) {
 						}
 					}
 				}
+			case "dump":
+				if lock == "shared" {
+					rsp = []byte( fmt.Sprintf("%v\n", shared_locks) )
+				} else {
+					rsp = []byte( fmt.Sprintf("%v\n", locks) )
+				}
 		}
 
 		// Write our response back to the client
 		_, _ = conn.Write( rsp );
 
-		// Always bump the command stats
-		stats_channel <- stat_bump{ stat: "command_"+command[0], val: 1 }
 	}
 }
 
