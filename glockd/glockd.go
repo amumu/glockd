@@ -332,6 +332,7 @@ func client_disconnected(my_client string, mylocks map[string] bool, myshared ma
 		lock_req(lock, -1, true, my_client)
 		stats_channel <- stat_bump{ stat: "shared_orphans", val: 1 }
 	}
+	stats_channel <- stat_bump{ stat: "connections", val: -1 }
 	// Nothing left to do... That's all the client had...
 }
 
@@ -344,6 +345,8 @@ func lock_client(conn net.Conn) {
 	my_client := conn.RemoteAddr().String()
 	mylocks := make(map [string] bool)
 	myshared := make(map [string] bool)
+
+	stats_channel <- stat_bump{ stat: "connections", val: 1 }
 
 	if cfg_verbose {
 		fmt.Printf( "%s connected\n", my_client )
