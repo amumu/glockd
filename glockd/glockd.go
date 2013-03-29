@@ -8,6 +8,7 @@ import(
 	"strings"
 	"flag"
 	"syscall"
+	"runtime"
 )
 
 const (
@@ -70,6 +71,8 @@ var cfg_pidfile string
 var cfg_verbose bool
 
 func main() {
+	runtime.GOMAXPROCS( runtime.NumCPU() )
+
 	flag.IntVar(&cfg_port, "port", 47200, "Listen on the following TCP Port (default: 47200)")
 	flag.StringVar(&cfg_pidfile, "pidfile", "", "pidfile to use (required)")
 	flag.BoolVar(&cfg_verbose, "verbose", false, "be verbose about what's going on (default:false)");
