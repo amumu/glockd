@@ -382,7 +382,7 @@ func lock_client(conn net.Conn) {
 		if false == is_valid_command(command[0]) {
 			stats_channel <- stat_bump{ stat: "invalid_commands", val: 1 }
 			if cfg_verbose {
-				fmt.Printf( "%s invalid command '%s'", my_client, strings.Trim( string(buf), string(0) ) )
+				fmt.Printf( "%s invalid command '%s'\n", my_client, strings.Trim( string(buf), string(0) ) )
 			}
 			// if we got an invalid command, skip it
 			continue
