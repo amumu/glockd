@@ -28,6 +28,9 @@ telnet to the port number that glockd is listening on (9999 by default.)  You ca
 in any programming language this way (fsockopen in PHP for example.)  There is no handshake, banner, or
 negotiation that takes place. Once connected it is ready for commands to be issued on the connection.
 
+Client Implimentations:
+	PHP		http://code.svn.wordpress.org/lockd/lockd-client.php
+
 Websockets
 ----------
 If websockets have not been disabled (by passing -ws 0 as a command line parameter) then you may simply
