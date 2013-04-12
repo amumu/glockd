@@ -30,8 +30,8 @@ var cfg_ws int
 func main() {
 	runtime.GOMAXPROCS( runtime.NumCPU() )
 
-	flag.IntVar(&cfg_port, "port", 47200, "Listen on the following TCP ws. 0 Disables. Default: 47200")
-	flag.IntVar(&cfg_ws, "ws", 47201, "Listen on the following TCP Port. 0 Disables. Default: 47201")
+	flag.IntVar(&cfg_port, "port", 9999, "Listen on the following TCP ws. 0 Disables. Default: 9999")
+	flag.IntVar(&cfg_ws, "ws", 9998, "Listen on the following TCP Port. 0 Disables. Default: 9998")
 	flag.StringVar(&cfg_pidfile, "pidfile", "", "pidfile to use (required)")
 	flag.BoolVar(&cfg_verbose, "verbose", false, "be verbose about what's going on. Default:false");
 	flag.Parse()
