@@ -25,13 +25,15 @@ type lock_reply struct {
 var cfg_port int
 var cfg_pidfile string
 var cfg_verbose bool
+var cfg_ws int
 
 func main() {
 	runtime.GOMAXPROCS( runtime.NumCPU() )
 
-	flag.IntVar(&cfg_port, "port", 47200, "Listen on the following TCP Port (default: 47200)")
+	flag.IntVar(&cfg_port, "port", 47200, "Listen on the following TCP ws. 0 Disables. Default: 47200")
+	flag.IntVar(&cfg_ws, "ws", 47201, "Listen on the following TCP Port. 0 Disables. Default: 47201")
 	flag.StringVar(&cfg_pidfile, "pidfile", "", "pidfile to use (required)")
-	flag.BoolVar(&cfg_verbose, "verbose", false, "be verbose about what's going on (default:false)");
+	flag.BoolVar(&cfg_verbose, "verbose", false, "be verbose about what's going on. Default:false");
 	flag.Parse()
 
 	if cfg_pidfile == "" {
@@ -58,7 +60,12 @@ func main() {
 	go mind_locks()
 	// Spawn a goroutine for shared locks
 	go mind_shared_locks()
+	// Spawn a goroutine for the websockets interface
+	go mind_websockets()
 	// Block on looping for incoming connections
-	mind_network()
+	go mind_tcp()
+
+	wait := make(chan bool)
+	<-wait
 }
 
