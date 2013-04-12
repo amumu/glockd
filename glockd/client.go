@@ -79,6 +79,7 @@ func lock_req(lock string, action int, shared bool, my_client string) ( []byte, 
 }
 
 func process_lock_client_command( c lock_client_command ) lock_client_response {
+	// Lots of variables local to this goroutine. Because: reasons
 	var command []string
 	var rsp []byte
 	var val string
