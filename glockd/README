@@ -18,3 +18,151 @@ Quick Start Testing
 cd tester
 go run test.go --host 127.0.0.1:9999
 
+Lock Types
+==========
+
+Exclusive Locks
+---------------
+
+Exclusive locks are... exclusive. They can only be held by one connection at a time.
+
+Upon disconnection of a client all of that clients exclusive locks are considered to be "orphaned".
+All orphaned locks are automatically released.  The intended purpose of this functionality is to help
+avoid the complicated gymnastics generally used in distributed locking (timeouts, heartbeating, etc)
+where a single process can maintain a lock simply by its continued presence, and can release its lock
+by its absence. A side effect of this methodology is that stale locks simply cannot exist in this
+environment.  If the connection goes away then its locks are released. Any lock still extant, therefor,
+is still validly held by a process that is still literally running somewhere.
+
+Shared Locks
+------------
+
+Shared locks are... not exclusive.  They can be obtained by any number of clients at the same time.
+
+One interesting feature of shared locks is that they are counted. That is if 4 people have a lock, 
+and another goes to lock the same thing then when it does it will be told that it is the 5th client
+to obtain that lock.  This makes shared locks good for things like rate limiting, throttling, etc,
+where the client can have logic built in in which after 5 active locks are obtained it waits, defers,
+or otherwise avoids doing work for which the shared lock was wanted.
+
+Upon disconnection of a client all of that clients shared locks are considered to be "orphaned".
+All orphaned locks are automatically released. This behavior works just like the exclusive lock
+orphaning feature.  Counts on shared locks are appropriately updated when locks are orphaned.
+
+Exclusive Locks API
+===================
+
+Generally speaking most commands for exclusive locks return a response thusly: "%d %s".  The integer
+portion of the response is meant for programatic interpretation, and represent success (1) or 
+failure (0), or represent taken (1) or available (0).
+
+Get a lock: "g %s\n", lockname
+------------------------------
+In the following example "foo" is available, but "bar" is already locked by another client
+
+> g foo
+< 1 Got Lock
+> g bar
+< 0 Cannot Get Lock
+
+Release a lock: "r %s\n", lockname
+----------------------------------
+> g foo
+< 1 Got Lock
+> r foo
+< 1 Released Lock
+> r bar
+< 0 Cannot Release Lock
+
+Inspect a lock: "i %s\n", lockname
+----------------------------------
+> i foo
+< 1 Locked
+> i bar
+< 0 Not Locked
+
+Get a list of one or more locks and their locking connections: "d\n", or "d %s\n", lockname
+-------------------------------------------------------------------------------------------
+This is mainly useful for debugging
+
+> d
+< baz: 174.62.83.171:59060
+< foo: 174.62.83.171:59056
+< bar: 174.62.83.171:59060
+< boo: 174.62.83.171:59060
+> d foo
+< foo: 174.62.83.171:59056
+
+Get a printout of the lock data structure: "dump\n"
+-------------------------------------------------
+This is mainly useful for debugging
+
+> dump
+< map[boo:174.62.83.171:59060 baz:174.62.83.171:59060 foo:174.62.83.171:59056 bar:174.62.83.171:59060]
+
+Shared Locks API
+================
+
+Get a shared lock: "sg %s\n"
+----------------------------
+TODO
+
+Release a shared lock: "sr %s\n"
+--------------------------------
+TODO
+
+Inspect a shared lock: "si %s\n"
+--------------------------------
+TODO
+
+Get a list of one or more locks and their locking connections: "sd\n", or "sd %s\n", lockname
+---------------------------------------------------------------------------------------------
+TODO
+
+Get a printout of the lock data structure: "dump shared\n"
+----------------------------------------------------------
+TODO
+
+Stats API
+=========
+
+Get stats information: "q\n"
+----------------------------
+> q
+< command_d: 4
+< command_dump: 1
+< command_g: 9
+< command_i: 7
+< command_q: 1
+< command_r: 3
+< command_sd: 1
+< command_sg: 1
+< command_si: 2
+< command_sr: 1
+< connections: 2
+< invalid_commands: 23
+< locks: 4
+< orphans: 2
+< shared_locks: 1
+< shared_orphans: 1
+
+Stats Response: "command_%s"
+----------------------------
+TODO
+
+Stats Response: "locks", "shared_locks"
+---------------------------------------
+TODO
+
+Stats Response: "orphans", "shared_orphans"
+-------------------------------------------
+TODO
+
+Stats Response: "connections"
+-----------------------------
+TODO
+
+Stats Response: "invalid_commands"
+----------------------------------
+TODO
+
