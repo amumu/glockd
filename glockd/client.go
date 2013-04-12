@@ -157,6 +157,8 @@ func process_lock_client_command( c lock_client_command ) lock_client_response {
 					// from this goroutines map.
 					delete(c.mylocks, lock )
 				}
+			} else {
+				rsp = []byte("0 Cannot Release Lock\n")
 			}
 		case "si":
 			// Since we always want an "up to date" and accurate count
