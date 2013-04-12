@@ -4,13 +4,13 @@ Quick Start
 Option 1 (compile on demand)
 ----------------------------
 cd glockd
-go run ./*.go -pidfile my.pid --port 9999
+go run ./*.go -pidfile my.pid -port 9999 -ws 9998
 
 Option 2 (compile and then run)
 -------------------------------
 cd glockd
 go build
-./glockd --pidfile my.pid --port 9999
+./glockd --pidfile my.pid -port 9999 -ws 9998
 
 Quick Start Testing
 ===================
@@ -18,12 +18,27 @@ Quick Start Testing
 cd tester
 go run test.go --host 127.0.0.1:9999
 
+Connecting to a glockd server
+=============================
+
+TCP/IP
+------
+If TCPIP has not been disabled (by passing -port 0 as a command line parameter) then you may simply
+telnet to the port number that glockd is listening on (9999 by default.)  You can open a TCPIP socket
+in any programming language this way (fsockopen in PHP for example.)  There is no handshake, banner, or
+negotiation that takes place. Once connected it is ready for commands to be issued on the connection.
+
+Websockets
+----------
+If websockets have not been disabled (by passing -ws 0 as a command line parameter) then you may simply
+connect to it as you normally would on "ws://%s:%d/", host, port.  Glockd listens for websocket 
+connections on port 9998 by default. The api is not changed at all for websockets.
+
 Lock Types
 ==========
 
 Exclusive Locks
 ---------------
-
 Exclusive locks are... exclusive. They can only be held by one connection at a time.
 
 Upon disconnection of a client all of that clients exclusive locks are considered to be "orphaned".
@@ -36,7 +51,6 @@ is still validly held by a process that is still literally running somewhere.
 
 Shared Locks
 ------------
-
 Shared locks are... not exclusive.  They can be obtained by any number of clients at the same time.
 
 One interesting feature of shared locks is that they are counted. That is if 4 people have a lock, 
@@ -103,25 +117,52 @@ This is mainly useful for debugging
 Shared Locks API
 ================
 
+Generally speaking most commands for shared locks return a response thusly: "%d %s".  The integer
+portion of the response is meant for programatic interpretation, and represent success %d >= 1 or 
+failure %d == 0, or represent [lack of] concurrency %d >= 0
+
 Get a shared lock: "sg %s\n"
 ----------------------------
-TODO
+client1> sg foo
+client1< 1 Got Lock
+client2> sg foo
+client2< 2 Got Lock
+client2> sg bar
+client2< 1 Got Lock
 
 Release a shared lock: "sr %s\n"
 --------------------------------
-TODO
+This feature is functionally identical to its exclusive counterpart, except that it works on shared locks
 
 Inspect a shared lock: "si %s\n"
 --------------------------------
-TODO
+client1> si foo
+client1< 0 Not Locked
+client1> sg foo
+client1< 1 Got Lock
+client2> si foo
+client2< 1 Locked
+client2> sg foo
+client2< 2 Got Lock
+client1> si foo
+client1< 2 Locked
 
 Get a list of one or more locks and their locking connections: "sd\n", or "sd %s\n", lockname
 ---------------------------------------------------------------------------------------------
-TODO
+> sd
+< blah: 174.62.83.171:59615
+< bar: 174.62.83.171:59615
+< foo: 174.62.83.171:59615
+< foo: 174.62.83.171:59614
+< baz: 174.62.83.171:59615
+> sd foo
+< foo: 174.62.83.171:59615
+< foo: 174.62.83.171:59614
 
 Get a printout of the lock data structure: "dump shared\n"
 ----------------------------------------------------------
-TODO
+> dump shared
+< map[blah:[174.62.83.171:59615] bar:[174.62.83.171:59615] foo:[174.62.83.171:59615 174.62.83.171:59614] baz:[174.62.83.171:59615]]
 
 Stats API
 =========
@@ -148,21 +189,27 @@ Get stats information: "q\n"
 
 Stats Response: "command_%s"
 ----------------------------
-TODO
+The number of times a particular command has been issued since the glockd has been running.
+Zeroed on startup
 
 Stats Response: "locks", "shared_locks"
 ---------------------------------------
-TODO
+The current active number of locked strings.  For shared locks this is the number of locked 
+strings and NOT the number of clients with active locks
 
 Stats Response: "orphans", "shared_orphans"
 -------------------------------------------
-TODO
+Incrimented by one every time a lock is orphaned. If a client disconnects with 3 shared and 1
+exclusive locks then the numbers are incrimented by 3 and 1 respecively. Zeroed on startup
 
 Stats Response: "connections"
 -----------------------------
-TODO
+The number of live connections to glockd. This number should always be 1 since you cannot
+get these stats except by connecting.
 
 Stats Response: "invalid_commands"
 ----------------------------------
-TODO
+The number of times something has been sent to glockd but that something was not a valid
+command. Example: "stats\n" would incriment this counter by one since "stats" is not a valid
+command.  Zeroed on startup
 
