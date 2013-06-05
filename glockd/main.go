@@ -26,15 +26,29 @@ var cfg_port int
 var cfg_pidfile string
 var cfg_verbose bool
 var cfg_ws int
+var cfg_registry bool
+var cfg_dump bool
 
 func main() {
 	runtime.GOMAXPROCS( runtime.NumCPU() )
 
-	flag.IntVar(&cfg_port, "port", 9999, "Listen on the following TCP ws. 0 Disables. Default: 9999")
-	flag.IntVar(&cfg_ws, "ws", 9998, "Listen on the following TCP Port. 0 Disables. Default: 9998")
+	flag.IntVar(&cfg_port, "port", 9999, "Listen on the following TCP ws. 0 Disables")
+	flag.IntVar(&cfg_ws, "ws", 9998, "Listen on the following TCP Port. 0 Disables.")
 	flag.StringVar(&cfg_pidfile, "pidfile", "", "pidfile to use (required)")
-	flag.BoolVar(&cfg_verbose, "verbose", false, "be verbose about what's going on. Default:false");
+	flag.BoolVar(&cfg_registry, "registry", true, "allow use of the registry.");
+	flag.BoolVar(&cfg_dump, "dump", true, "Allow use of the dump, d, and sd commands.")
+	flag.BoolVar(&cfg_verbose, "verbose", false, "be verbose about what's going on.");
+
 	flag.Parse()
+
+	if cfg_verbose == true {
+		fmt.Printf( "cfg_port:     %+v\n", cfg_port )
+		fmt.Printf( "cfg_ws:       %+v\n", cfg_ws )
+		fmt.Printf( "cfg_pidfile:  %+v\n", cfg_pidfile )
+		fmt.Printf( "cfg_registry: %+v\n", cfg_registry )
+		fmt.Printf( "cfg_dump:     %+v\n", cfg_dump )
+		fmt.Printf( "cfg_verbose:  %+v\n", cfg_verbose )
+	}
 
 	if cfg_pidfile == "" {
 		println( "Please specify a pidfile" )
@@ -62,9 +76,13 @@ func main() {
 	go mind_shared_locks()
 	// Spawn a goroutine for the websockets interface
 	go mind_websockets()
-	// Block on looping for incoming connections
+	// Spawn a goroutine for accepting and handling incoming connections
 	go mind_tcp()
-
+	if cfg_registry == true {
+		// Spawn a goroutine for minding the user registry
+		go mind_registry()
+	}
+	// Block indefinitely
 	wait := make(chan bool)
 	<-wait
 }

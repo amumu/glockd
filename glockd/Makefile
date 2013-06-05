@@ -1,10 +1,12 @@
-GOPATH := $(shell readlink -f ./)/
+UNAME := $(shell uname)
+GOPATH := $(shell if [ "$(UNAME)" = "Darwin" ]; then greadlink -f ./; else readlink -f ./; fi)/
+CMD := env GOPATH=$(GOPATH) go
 
 all: build
 
 build:
-	env go install ./src/github.com/garyburd/go-websocket/websocket/
-	env go build
+	$(CMD) install ./src/github.com/garyburd/go-websocket/websocket/
+	$(CMD) build
 
 clean:
 	rm -rvf pkg
