@@ -98,8 +98,8 @@ Inspect a lock: "i %s\n", lockname
 > i bar
 < 0 Not Locked
 
-Get a list of one or more locks and their locking connections: "d\n", or "d %s\n", lockname
--------------------------------------------------------------------------------------------
+Get a list of one or more locks and their locking connections: "d\n", or "d %s\n", lockname (only available when -dump is true)
+-------------------------------------------------------------------------------------------------------------------------------
 This is mainly useful for debugging
 
 > d
@@ -110,8 +110,8 @@ This is mainly useful for debugging
 > d foo
 < foo: 174.62.83.171:59056
 
-Get a printout of the lock data structure: "dump\n"
--------------------------------------------------
+Get a printout of the lock data structure: "dump\n" (only available when -dump is true)
+---------------------------------------------------------------------------------------
 This is mainly useful for debugging
 
 > dump
@@ -150,8 +150,8 @@ client2< 2 Got Lock
 client1> si foo
 client1< 2 Locked
 
-Get a list of one or more locks and their locking connections: "sd\n", or "sd %s\n", lockname
----------------------------------------------------------------------------------------------
+Get a list of one or more locks and their locking connections: "sd\n", or "sd %s\n", lockname (only available when -dump is true)
+---------------------------------------------------------------------------------------------------------------------------------
 > sd
 < blah: 174.62.83.171:59615
 < bar: 174.62.83.171:59615
@@ -166,6 +166,38 @@ Get a printout of the lock data structure: "dump shared\n"
 ----------------------------------------------------------
 > dump shared
 < map[blah:[174.62.83.171:59615] bar:[174.62.83.171:59615] foo:[174.62.83.171:59615 174.62.83.171:59614] baz:[174.62.83.171:59615]]
+
+Registry API
+============
+
+Set the name for your connection (only available when -registry is true)
+------------------------------------------------------------------------
+> g lock1
+< 1 Got Lock
+> d lock1
+< lock1: 127.0.0.1:60882
+> iam foo
+< 1 ok
+> d lock1
+< lock1: foo
+> iam
+< 1 ok
+> d lock1
+< lock1: 127.0.0.1:60882
+
+Find which clients have chosen to be a specific name (only available when -dump is true and -registry is true)
+--------------------------------------------------------------------------------------------------------------
+client1> who
+client1< 
+client1> iam me
+client1< 1 ok
+client2> iam someone_else
+client2< 1 ok
+client1> who
+client1< 127.0.0.1:60882: me
+client1< 127.0.0.1:60918: someone_else
+client1> who someone_else
+client1< 127.0.0.1:60918: someone_else
 
 Stats API
 =========

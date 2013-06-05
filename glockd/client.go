@@ -19,7 +19,7 @@ type lock_client_command struct {
 }
 
 // valid command list
-var commands = []string { "d", "sd","i", "si", "g", "sg", "r", "sr", "q", "dump" }
+var commands = []string { "iam", "who", "d", "sd","i", "si", "g", "sg", "r", "sr", "q", "dump" }
 
 func client_disconnected(my_client string, mylocks map[string] bool, myshared map[string] bool) {
 	// Since the client has disconnected... we need to release all of the locks that it held
@@ -41,6 +41,7 @@ func client_disconnected(my_client string, mylocks map[string] bool, myshared ma
 		lock_req(lock, -1, true, my_client)
 		stats_channel <- stat_bump{ stat: "shared_orphans", val: 1 }
 	}
+	registrar<- registration_request{ client: my_client }
 	stats_channel <- stat_bump{ stat: "connections", val: -1 }
 	// Nothing left to do... That's all the client had...
 }
@@ -108,6 +109,30 @@ func process_lock_client_command( c lock_client_command ) lock_client_response {
 
 	// Actually deal with the command now...
 	switch command[0] {
+		case "iam":
+			if cfg_registry == true {
+				registrar<- registration_request{ client: c.my_client, name: lock }
+				if cfg_verbose {
+					fmt.Printf( "%s changed their name to '%s'\n", c.my_client, lock )
+				}
+				rsp = []byte("1 ok\n")
+			} else {
+				rsp = []byte("0 disabled\n")
+			}
+		case "who":
+			if cfg_dump == true && cfg_registry == true {
+				c := make( chan map[string] string )
+				registrar<- registration_request{ dump: c }
+				registry := <-c
+				for idx, val := range registry {
+					if lock == "" || lock == val {
+						rsp = []byte( string(rsp) + fmt.Sprintf("%s: %s\n", idx, val))
+					}
+				}
+				close(c)
+			} else {
+				rsp = []byte("0 disabled\n")
+			}
 		case "q":
 			// loop over stats and generated a response
 			rsp = []byte("")
@@ -180,32 +205,52 @@ func process_lock_client_command( c lock_client_command ) lock_client_response {
 				delete(c.myshared, lock )
 			}
 		case "d":
-			rsp = []byte("")
-			// loop over all the locks
-			for idx, val := range locks {
-				// if we want all locks, or this specific lock matches the lock we 
-				// want then add it to the response output
-				if lock == "" || lock == idx {
-					rsp = []byte( string(rsp) + fmt.Sprintf("%s: %s\n", idx, val))
+			if cfg_dump == true {
+				rsp = []byte("")
+				// loop over all the locks
+				for idx, val := range locks {
+					// if we want all locks, or this specific lock matches the lock we 
+					// want then add it to the response output
+					c := make(chan string, 1)
+					if lock == "" || lock == idx {
+						registrar<- registration_request{ client: val, reply: c }
+						val = <-c
+						rsp = []byte( string(rsp) + fmt.Sprintf("%s: %s\n", idx, val))
+					}
+					close(c)
 				}
+			} else {
+				rsp = []byte("0 disabled\n")
 			}
 		case "sd":
-			rsp = []byte("")
-			// loop over all the locks
-			for idx, val := range shared_locks {
-				// if we want all locks, or this specific lock matches the lock we
-				// want then add it to the response output
-				if lock == "" || lock == idx {
-					for _, locker := range val {
-						rsp = []byte( string(rsp) + fmt.Sprintf("%s: %s\n", idx, locker))
+			if cfg_dump == true {
+				rsp = []byte("")
+				// loop over all the locks
+				for idx, val := range shared_locks {
+					// if we want all locks, or this specific lock matches the lock we
+					// want then add it to the response output
+					if lock == "" || lock == idx {
+						c := make(chan string, 1)
+						for _, locker := range val {
+							registrar<- registration_request{ client: locker, reply: c }
+							locker = <-c
+							rsp = []byte( string(rsp) + fmt.Sprintf("%s: %s\n", idx, locker))
+						}
+						close(c)
 					}
 				}
+			} else {
+				rsp = []byte("0 disabled\n")
 			}
 		case "dump":
-			if lock == "shared" {
-				rsp = []byte( fmt.Sprintf("%v\n", shared_locks) )
+			if cfg_dump == true {
+				if lock == "shared" {
+					rsp = []byte( fmt.Sprintf("%v\n", shared_locks) )
+				} else {
+					rsp = []byte( fmt.Sprintf("%v\n", locks) )
+				}
 			} else {
-				rsp = []byte( fmt.Sprintf("%v\n", locks) )
+				rsp = []byte("0 disabled\n")
 			}
 	}
 
