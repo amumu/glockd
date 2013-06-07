@@ -5,6 +5,11 @@ PHP: http://code.svn.wordpress.org/lockd/lockd-client.php
 Python: https://gist.github.com/mdawaffe/e53c86e5163b48d5fe3a
 Go: https://github.com/apokalyptik/glockc
 
+Quickest Start
+==============
+
+Use one of the precompiled glockd binaries located in the subdirectories under "builds"
+
 Quick Start
 ============
 
