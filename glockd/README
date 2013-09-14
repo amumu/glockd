@@ -90,25 +90,25 @@ Get a lock: "g %s\n", lockname
 In the following example "foo" is available, but "bar" is already locked by another client
 
 > g foo
-< 1 Got Lock
+< 1 Lock Get Success: foo
 > g bar
-< 0 Cannot Get Lock
+< 0 Lock Get Failure: bar
 
 Release a lock: "r %s\n", lockname
 ----------------------------------
 > g foo
-< 1 Got Lock
+< 1 Lock Get Success: foo
 > r foo
-< 1 Released Lock
+< 1 Lock Release Success: foo
 > r bar
-< 0 Cannot Release Lock
+< 0 Lock Release Failure: bar
 
 Inspect a lock: "i %s\n", lockname
 ----------------------------------
 > i foo
-< 1 Locked
+< 1 Lock Is Locked: foo
 > i bar
-< 0 Not Locked
+< 0 Lock Not Locked: bar
 
 Get a list of one or more locks and their locking connections: "d\n", or "d %s\n", lockname (only available when -dump is true)
 -------------------------------------------------------------------------------------------------------------------------------
@@ -139,28 +139,41 @@ failure %d == 0, or represent [lack of] concurrency %d >= 0
 Get a shared lock: "sg %s\n"
 ----------------------------
 client1> sg foo
-client1< 1 Got Lock
+client1< 1 Shared Lock Get Success: foo
 client2> sg foo
-client2< 2 Got Lock
+client2< 2 Shared Lock Get Success: foo
 client2> sg bar
-client2< 1 Got Lock
+client2< 1 Shared Lock Get Success: bar
 
 Release a shared lock: "sr %s\n"
 --------------------------------
-This feature is functionally identical to its exclusive counterpart, except that it works on shared locks
+client1> sg foo
+client1< 1 Shared Lock Get Success: foo
+client2> sg foo
+client2< 2 Shared Lock Get Success: foo
+client3> si foo
+client3< 2 Shared Lock Is Locked: foo
+client1> sr foo
+client1< 1 Shared Lock Release Success: foo
+client3> si foo
+client3< 1 Shared Lock Is Locked: foo
+client2> sr foo
+client2< 1 Shared Lock Release Success: foo
+client3> si foo
+client3< 0 Shared Lock Not Locked: foo
 
 Inspect a shared lock: "si %s\n"
 --------------------------------
 client1> si foo
-client1< 0 Not Locked
+client1< 0 Shared Lock Not Locked: foo
 client1> sg foo
-client1< 1 Got Lock
+client1< 1 Shared Lock Get Success: foo
 client2> si foo
-client2< 1 Locked
+client2< 1 Shared Lock Is Locked: foo
 client2> sg foo
-client2< 2 Got Lock
+client2< 2 Shared Lock Get Success: foo
 client1> si foo
-client1< 2 Locked
+client1< 2 Shared Lock Get Success: foo
 
 Get a list of one or more locks and their locking connections: "sd\n", or "sd %s\n", lockname (only available when -dump is true)
 ---------------------------------------------------------------------------------------------------------------------------------

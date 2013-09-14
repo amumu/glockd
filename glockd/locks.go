@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // Locks request channel and data structure
 var lock_channel = make(chan lock_request, 8192)
 var locks = map[string] string {}
@@ -19,32 +21,32 @@ func mind_locks() {
 				if present {
 					// Cool. Done 
 					delete( locks, req.lock )
-					response = "1 Released Lock\n"
+					response = fmt.Sprintf("1 Lock Release Success: %s\n", req.lock)
 					// Bump
 					stats_channel <- stat_bump{ stat: "locks", val: -1 }
 				} else {
 					// No dice
-					response = "0 Cannot Release Lock\n"
+					response = fmt.Sprintf("0 Lock Release Failure: %s\n", req.lock)
 				}
 			case 0:
 				// The client is checking on a lock
 				if present {
 					// Yep, locked
-					response = "1 Locked\r\n"
+					response = fmt.Sprintf("1 Lock Is Locked: %s\r\n", req.lock)
 				} else {
 					// Nope, not locked
-					response = "0 Not Locked\r\n"
+					response = fmt.Sprintf("0 Lock Not Locked: %s\r\n", req.lock)
 				}
 				break
 			case 1:
 				// The client wants to obtain a lock
 				if present {
 					// But can't because it's already locked
-					response = "0 Cannot Get Lock\r\n"
+					response = fmt.Sprintf("0 Lock Get Failure: %s\r\n", req.lock)
 				} else {
 					// Cool, done.
 					locks[req.lock] = req.client
-					response = "1 Got Lock\r\n"
+					response = fmt.Sprintf("1 Lock Get Success: %s\r\n", req.lock)
 					// Bump
 					stats_channel <- stat_bump{ stat: "locks", val: 1 }
 				}

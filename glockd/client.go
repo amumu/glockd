@@ -152,7 +152,7 @@ func process_lock_client_command( c lock_client_command ) lock_client_response {
 			_, present := c.mylocks[lock]
 			if present {
 				// if we have the lock, don't bother the lock goroutine
-				rsp = []byte("1 Locked\n")
+				rsp = []byte(fmt.Sprintf("1 Lock Is Locked: %s\n", lock))
 			} else {
 				// otherwise check the canonical source
 				rsp, _ = lock_req( lock, 0, false, c.my_client )
@@ -162,7 +162,7 @@ func process_lock_client_command( c lock_client_command ) lock_client_response {
 			_, present := c.mylocks[lock]
 			if present {
 				// if we have the lock then the answer is always "got it"
-				rsp = []byte("1 Got Lock\n")
+				rsp = []byte(fmt.Sprintf("1 Lock Get Success: %s\n", lock))
 			} else {
 				// otherwise request it from the canonical goroutine
 				rsp, val = lock_req( lock, 1, false, c.my_client )
@@ -183,7 +183,7 @@ func process_lock_client_command( c lock_client_command ) lock_client_response {
 					delete(c.mylocks, lock )
 				}
 			} else {
-				rsp = []byte("0 Cannot Release Lock\n")
+				rsp = []byte(fmt.Sprintf("0 Lock Release Failure: %s\n", lock))
 			}
 		case "si":
 			// Since we always want an "up to date" and accurate count

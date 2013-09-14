@@ -51,19 +51,19 @@ func mind_shared_locks() {
 						// remove the slice from the lock map
 						delete(shared_locks, req.lock)
 					}
-					response = "1 Released Lock\r\n"
+					response = fmt.Sprintf("1 Shared Lock Release Success: %s\r\n", req.lock)
 				} else {
 					// But we can't because we have no such lock
-					response = "0 Cannot Release Lock\r\n"
+					response = fmt.Sprintf("0 Shared Lock Release Failure: %s\r\n", req.lock)
 				}
 			case 0:
 				// Client wants info about a lock
 				if present {
 					// Locked, give 'em a number
-					response = fmt.Sprintf("%d Locked\r\n", len(shared_locks[req.lock]) )
+					response = fmt.Sprintf("%d Shared Lock Is Locked: %s\r\n", len(shared_locks[req.lock]), req.lock)
 				} else {
 					// Not locked. 0 because: sanity
-					response = "0 Not Locked\r\n"
+					response = fmt.Sprintf( "0 Shared Lock Not Locked: %s\r\n", req.lock)
 				}
 			case 1:
 				// Client wants to lock something
@@ -79,7 +79,7 @@ func mind_shared_locks() {
 					shared_locks[req.lock] = []string{ req.client }
 				}
 				// This always works... So we just need to return a count
-				response = fmt.Sprintf("%d Got Lock\r\n", len(shared_locks[req.lock]) )
+				response = fmt.Sprintf("%d Shared Lock Get Success: %s\r\n", len(shared_locks[req.lock]), req.lock)
 		}
 		// Reply back to the client on the channel it provided us with in the request
 		req.reply <- lock_reply{ lock: req.lock, response: response }
