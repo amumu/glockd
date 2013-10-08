@@ -5,11 +5,55 @@ import(
 	"net"
 	"os"
 	"bufio"
+	"log"
 )
 
 const (
 	RECV_BUF_LEN = 1024
 )
+
+var connectionCounter chan string
+
+func mindConnectionCounter() {
+	var connectionCount uint64
+	if connectionCounter != nil {
+		return
+	}
+	connectionCounter = make(chan string, 1024)
+	for {
+		connectionCount++
+		connectionCounter<- fmt.Sprintf("conn-%d", connectionCount)
+	}
+}
+
+func mind_socket(listener net.Listener) {
+	go mindConnectionCounter()
+	// Loop forever
+	for {
+		// Got a connecting client
+		conn, err := listener.Accept()
+		// Maybe
+		if err != nil {
+			println("Error accept:", err.Error())
+			continue
+		}
+		// Seems legit. Spawn a goroutine to handle this new client
+		go socket_client(conn, <-connectionCounter)
+	}
+}
+
+func mind_unix() {
+	if cfg_unix == "" {
+		return
+	}
+	os.Remove(cfg_unix)
+	if listener, err := net.Listen("unix", cfg_unix); err != nil {
+		log.Fatalf( "UNIX SOCKET Listener Error: %+v", err );
+	} else {
+		os.Chmod(cfg_unix, 0766)
+		mind_socket(listener)
+	}
+}
 
 func mind_tcp() {
 	if cfg_port == 0 {
@@ -23,18 +67,7 @@ func mind_tcp() {
 		println("error listening:", err.Error())
 		os.Exit(1)
 	}
-	// Loop forever
-	for {
-		// Got a connecting client
-		conn, err := listener.Accept()
-		// Maybe
-		if err != nil {
-			println("Error accept:", err.Error())
-			continue
-		}
-		// Seems legit. Spawn a goroutine to handle this new client
-		go tcp_client(conn)
-	}
+	mind_socket(listener)
 }
 
 func is_valid_command( command string ) bool {
@@ -49,8 +82,15 @@ func is_valid_command( command string ) bool {
 	return false
 }
 
-func tcp_client(conn net.Conn) {
+func socket_client(conn net.Conn, my_client string) {
+	/*
 	my_client := conn.RemoteAddr().String()
+	log.Printf("%#v", conn)
+	log.Printf("%#v", conn.RemoteAddr())
+	log.Printf("%#v", conn.RemoteAddr().String())
+	log.Printf("%#v", conn.LocalAddr())
+	log.Printf("%#v", conn.LocalAddr().String())
+	*/
 	mylocks := make(map [string] bool)
 	myshared := make(map [string] bool)
 
