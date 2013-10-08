@@ -49,6 +49,21 @@ If websockets have not been disabled (by passing -ws 0 as a command line paramet
 connect to it as you normally would on "ws://%s:%d/", host, port.  Glockd listens for websocket 
 connections on port 9998 by default. The api is not changed at all for websockets.
 
+Unix Sockets
+------------
+If a path to a local unix socket has been specified (via the -unix parameter) then you may connect to it
+how you would any AF_UNIX socket per your programming language (example below.)  You may then read/write
+commands as you would a TCP/IP socket connection.  This obviously only works when connecting to glockd
+from the same machine since a shared filesystem which supports unix sockets is required.
+
+Example connecting to glockd via unix sockets (python)
+
+	import socket
+	s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+	s.connect("/var/run/glockd/socket")
+	s.sendall("g foo\n")
+	print s.recv(4096)
+
 Lock Types
 ==========
 
