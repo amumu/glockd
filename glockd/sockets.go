@@ -80,7 +80,7 @@ func is_valid_command( command string ) bool {
 
 func socket_client(conn net.Conn) {
 	my_client := conn.RemoteAddr().String()
-	if my_client == "" {
+	if rx_validate_remote_addr.MatchString(my_client) == false {
 		my_client = <-unixConnectionCounter
 	}
 	mylocks := make(map [string] bool)
