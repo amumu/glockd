@@ -210,6 +210,21 @@ Get a printout of the lock data structure: "dump shared\n"
 Registry API
 ============
 
+Return the name of your connection (even when -registry is not true)
+--------------------------------------------------------------------
+This command always returns two values. First the default connection name 
+(which is what would be used in the output of the dump( shared)? commands) 
+and the second is the registered name of the connection (which would be 
+used in the output of the s?d commands and defaults to the first parameter 
+if the iam command was not used to register a name for the current session)
+
+< me
+> 1 127.0.0.1:57871 127.0.0.1:57871
+< iam foo
+> 1 ok
+< me
+> 1 127.0.0.1:57871 foo
+
 Set the name for your connection (only available when -registry is true)
 ------------------------------------------------------------------------
 > g lock1

@@ -12,22 +12,17 @@ const (
 	RECV_BUF_LEN = 1024
 )
 
-var connectionCounter chan string
-
-func mindConnectionCounter() {
+var unixConnectionCounter chan string
+func mindUnixConnectionCounter() {
 	var connectionCount uint64
-	if connectionCounter != nil {
-		return
-	}
-	connectionCounter = make(chan string, 1024)
+	unixConnectionCounter = make(chan string, 1024)
 	for {
 		connectionCount++
-		connectionCounter<- fmt.Sprintf("conn-%d", connectionCount)
+		unixConnectionCounter<- fmt.Sprintf("unix:%d", connectionCount)
 	}
 }
 
 func mind_socket(listener net.Listener) {
-	go mindConnectionCounter()
 	// Loop forever
 	for {
 		// Got a connecting client
@@ -38,7 +33,7 @@ func mind_socket(listener net.Listener) {
 			continue
 		}
 		// Seems legit. Spawn a goroutine to handle this new client
-		go socket_client(conn, <-connectionCounter)
+		go socket_client(conn)
 	}
 }
 
@@ -51,6 +46,7 @@ func mind_unix() {
 		log.Fatalf( "UNIX SOCKET Listener Error: %+v", err );
 	} else {
 		os.Chmod(cfg_unix, 0766)
+		go mindUnixConnectionCounter()
 		mind_socket(listener)
 	}
 }
@@ -82,15 +78,11 @@ func is_valid_command( command string ) bool {
 	return false
 }
 
-func socket_client(conn net.Conn, my_client string) {
-	/*
+func socket_client(conn net.Conn) {
 	my_client := conn.RemoteAddr().String()
-	log.Printf("%#v", conn)
-	log.Printf("%#v", conn.RemoteAddr())
-	log.Printf("%#v", conn.RemoteAddr().String())
-	log.Printf("%#v", conn.LocalAddr())
-	log.Printf("%#v", conn.LocalAddr().String())
-	*/
+	if my_client == "" {
+		my_client = <-unixConnectionCounter
+	}
 	mylocks := make(map [string] bool)
 	myshared := make(map [string] bool)
 
