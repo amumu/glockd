@@ -6,6 +6,7 @@ import(
 	"flag"
 	"syscall"
 	"runtime"
+	"regexp"
 )
 
 // Structure for requesting a lock with
@@ -29,6 +30,8 @@ var cfg_ws int
 var cfg_registry bool
 var cfg_dump bool
 var cfg_unix string
+
+var rx_validate_remote_addr *regexp.Regexp
 
 func main() {
 	runtime.GOMAXPROCS( runtime.NumCPU() )
@@ -57,6 +60,8 @@ func main() {
 		println( "Please specify a pidfile" )
 		os.Exit(2)
 	}
+
+	rx_validate_remote_addr = regexp.MustCompile(":\\d+$")
 
 	pidfile, err1 := os.OpenFile(cfg_pidfile, os.O_CREATE | os.O_RDWR, 0666)
 	err2 := syscall.Flock(int(pidfile.Fd()), syscall.LOCK_NB | syscall.LOCK_EX)
