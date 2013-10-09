@@ -19,7 +19,7 @@ type lock_client_command struct {
 }
 
 // valid command list
-var commands = []string { "iam", "who", "d", "sd","i", "si", "g", "sg", "r", "sr", "q", "dump" }
+var commands = []string { "me", "iam", "who", "d", "sd","i", "si", "g", "sg", "r", "sr", "q", "dump" }
 
 func client_disconnected(my_client string, mylocks map[string] bool, myshared map[string] bool) {
 	// Since the client has disconnected... we need to release all of the locks that it held
@@ -109,6 +109,10 @@ func process_lock_client_command( c lock_client_command ) lock_client_response {
 
 	// Actually deal with the command now...
 	switch command[0] {
+		case "me":
+			iam := make(chan string, 1)
+			registrar<- registration_request{ client: c.my_client, reply: iam }
+			rsp = []byte(fmt.Sprintf("1 %s %s\n", c.my_client, <-iam))
 		case "iam":
 			if cfg_registry == true {
 				registrar<- registration_request{ client: c.my_client, name: lock }
