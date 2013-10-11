@@ -21,6 +21,10 @@ class gsock:
 		v = int(v)
 		return (v, s)
 
+	def raw(self, data):
+		self.socket.sendall("%s\n" %data)
+		return self.socket.recv(1024000).strip()
+
 	def close(self):
 		self.socket.close()
 
@@ -36,7 +40,7 @@ class gtcp(gsock):
 		p = int(p)
 		self.socket.connect((h, p))
 
-class gws():
+class gws(gsock):
 	def __init__(self, address):
 		self.socket = create_connection(address)
 
@@ -45,6 +49,10 @@ class gws():
 		(v, s) = self.socket.recv().strip().split(" ", 1)
 		v = int(v)
 		return (v, s)
+	
+	def raw(self, data):
+		self.socket.send("%s" %data)
+		return self.socket.recv().strip()
 
 	def close(self):
 		self.socket.close()
@@ -53,119 +61,151 @@ def test_registry(one, two):
 	(i1, v1) = one.cmd( 'me' )
 	(i2, v2) = two.cmd( 'me' )
 	prefix = ok if v1 != v2 else no
-	print prefix + "[me ] client1 and client2 have unique default identifiers"
+	print prefix + "me\t\tclient1 and client2 have unique default identifiers"
 
 	(i, v) = one.cmd( 'iam client1' )
 	prefix = ok if i == 1 else no
-	print prefix + "[iam] client1 changed its name"
+	print prefix + "iam\t\tclient1 changed its name"
 
 	(i, v) = one.cmd( 'me' )
 	v1 = v1.split(" ", 1)
 	v1[1] = "client1"
 	v1 = " ".join(v1)
 	prefix = ok if v == v1 else no
-	print prefix + "[me ] client1 now shows proper new name via the me command"
+	print prefix + "me\t\tclient1 now shows proper new name via the me command"
 
 def test_exclusive(one, two):
 	(i, v) = one.cmd( 'i ' + random_lock_string )
 	prefix = ok if i == 0 else no
-	print prefix + "[i  ] exclusive lock should not yet be held"
+	print prefix + "i\t\texclusive lock should not yet be held"
 
 	(i, v) = one.cmd( 'g ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[g  ] first client should get exclusive lock"
+	print prefix + "g\t\tfirst client should get exclusive lock"
 	
 	(i, v) = two.cmd( 'i ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[i  ] exclusive lock should now be held"
+	print prefix + "i\t\texclusive lock should now be held"
 
 	(i, v) = one.cmd( 'g ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[g  ] first client should get exclusive lock again if rerequested"
+	print prefix + "g\t\tfirst client should get exclusive lock again if rerequested"
 
 	(i, v) = two.cmd( 'g ' + random_lock_string )
 	prefix = ok if i == 0 else no
-	print prefix + "[g  ] second client should not get exclusive lock obtained by first client"
+	print prefix + "g\t\tsecond client should not get exclusive lock obtained by first client"
 
 	(i, v) = two.cmd( 'r ' + random_lock_string )
 	prefix = ok if i == 0 else no
-	print prefix + "[r  ] second client should not be able to release an exclusive lock that it does not have"
+	print prefix + "r\t\tsecond client should not be able to release an exclusive lock that it does not have"
 
 	(i, v) = one.cmd( 'r ' + random_lock_string )
 	refix = ok if i == 1 else no
-	print prefix + "[r  ] first client should be able to release its exclusive lock"
+	print prefix + "r\t\tfirst client should be able to release its exclusive lock"
 
 	(i, v) = two.cmd( 'g ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[g  ] second client should be able to get the recently released exclusive lock"
+	print prefix + "g\t\tsecond client should be able to get the recently released exclusive lock"
 
 	(i, v) = one.cmd( 'g ' + random_lock_string )
 	prefix = ok if i == 0 else no
-	print prefix + "[g  ] first client should not get exclusive lock obtained by second client"
+	print prefix + "g\t\tfirst client should not get exclusive lock obtained by second client"
 
 def test_shared(one, two):
 	(i, v) = one.cmd( 'si ' + random_lock_string )
 	prefix = ok if i == 0 else no
-	print prefix + "[si ] shared lock should not be held"
+	print prefix + "si\t\tshared lock should not be held"
 
 	(i, v) = one.cmd( 'sr ' + random_lock_string )
 	prefix = ok if i == 0 else no
-	print prefix + "[sr ] first client should not be able to release a shared lock that it has not obtained"
+	print prefix + "sr\t\tfirst client should not be able to release a shared lock that it has not obtained"
 
 	(i, v) = one.cmd( 'sg ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[sg ] first client should be able to get shared lock and see that it is the first client to do so"
+	print prefix + "sg\t\tfirst client should be able to get shared lock and see that it is the first client to do so"
 
 	(i, v) = one.cmd( 'sg ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[sg ] first client should be able to get shared lock again but not increment the counter"
+	print prefix + "sg\t\tfirst client should be able to get shared lock again but not increment the counter"
 
 	(i, v) = two.cmd( 'si ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[si ] second client should now see the lock held (rval: 1)"
+	print prefix + "si\t\tsecond client should now see the lock held (rval: 1)"
 
 	(i, v) = two.cmd( 'sg ' + random_lock_string )
 	prefix = ok if i == 2 else no
-	print prefix + "[sg ] second client should also get shared lock and see that it is the second client to do so"
+	print prefix + "sg\t\tsecond client should also get shared lock and see that it is the second client to do so"
 
 	(i, v) = two.cmd( 'sg ' + random_lock_string )
 	prefix = ok if i == 2 else no
-	print prefix + "[sg ] second client should also get shared lock again but not increment the counter"
+	print prefix + "sg\t\tsecond client should also get shared lock again but not increment the counter"
 
 	(i, v) = one.cmd( 'si ' + random_lock_string )
 	prefix = ok if i == 2 else no
-	print prefix + "[si ] first client should now see the lock held by two clients"
+	print prefix + "si\t\tfirst client should now see the lock held by two clients"
 
 	(i, v) = one.cmd( 'sr ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[sr ] first client should be able to release a shared lock that it has obtained"
+	print prefix + "sr\t\tfirst client should be able to release a shared lock that it has obtained"
 
 	(i, v) = two.cmd( 'si ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[si ] second client should now see the lock held by one client"
+	print prefix + "si\t\tsecond client should now see the lock held by one client"
 
 def test_orphan(one, two):
 	(i, v) = two.cmd( 'i ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[i  ] second client should have the exclusive lock"
+	print prefix + "i\t\tsecond client should have the exclusive lock"
 	
 	(i, v) = two.cmd( 'si ' + random_lock_string )
 	prefix = ok if i == 1 else no
-	print prefix + "[si ] second client should have the shared lock"
+	print prefix + "si\t\tsecond client should have the shared lock"
 
 	two.close()
-	print ok + "[---] second client has disconnected"
+	print ok + "\t\tsecond client has disconnected"
 
 	(i, v) = one.cmd( 'i ' + random_lock_string )
 	prefix = ok if i == 0 else no
-	print prefix + "[i  ] first client should now see the exclusive lock as unlocked"
+	print prefix + "i\t\tfirst client should now see the exclusive lock as unlocked"
 
 	(i, v) = one.cmd( 'si ' + random_lock_string )
 	prefix = ok if i == 0 else no
-	print prefix + "[i  ] first client should now see the shared lock as unlocked"
+	print prefix + "i\t\tfirst client should now see the shared lock as unlocked"
 
 	one.close()
-	print ok + "[---] first client has disconnected"
+	print ok + "\t\tfirst client has disconnected"
+
+def test_introspection(one, two):
+	(i, v) = one.cmd( 'iam client1' )
+	(i, me) = one.cmd( 'me' )
+	(i, v) = two.cmd( 'iam client2' )
+	v = one.raw( 'who' )
+	prefix = ok if v.find('client1') > 0 and v.find('client2') > 0 else no
+	print prefix + "who\t\tfound client1 and client2"
+
+	v = two.raw( 'who client1' )
+	prefix = ok if v == me.replace(" ", ": ") else no
+	print prefix + "who\t\tresolved client1 to first connection via second connection who command"
+	
+	v = one.raw( 'd ' + random_lock_string )
+	prefix = ok if v == random_lock_string + ": client2" else no
+	print prefix + "d\t\texclusive lock held by client2"
+
+	v = one.raw( 'sd ' + random_lock_string )
+	prefix = ok if v == random_lock_string + ": client2" else no
+	print prefix + "sd\t\tshared lock held by client2"
+
+	v = one.raw( 'dump' )
+	prefix = ok if v[0:4] == "map[" and v[-1:] == "]" else no
+	print prefix + "dump\t\tdump looks like a GO map"
+
+	v = one.raw( 'dump shared' )
+	prefix = ok if v[0:4] == "map[" and v[-1:] == "]" else no
+	print prefix + "dump shared\tdump looks like a GO map"
+
+	v = one.raw( 'q' )
+	prefix = ok if v.find('connections: ') > 0 and v.find('command_g') > 0 else no
+	print prefix + "q\t\tstats output looks like stats"
 
 def test(one, two):
 	print "\tTesting registry"
@@ -174,6 +214,8 @@ def test(one, two):
 	test_exclusive(one, two)
 	print "\tTesting shared locks"
 	test_shared(one, two)
+	print "\tTesting introspection"
+	test_introspection(one, two)
 	print "\tTesting orphaning of locks"
 	test_orphan(one, two)
 
@@ -201,8 +243,8 @@ def test_all():
 	test_tcp()
 	test_ws()
 
-ok = u"\t\t\033[92m\u2713\033[0m "
-no = u"\t\t\033[91m\u2717\033[0m "
+ok = u"\t\t\033[92m\u2713\033[0m\t"
+no = u"\t\t\033[91m\u2717\033[0m\t"
 random_lock_string = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(40))
 
 test_all()
