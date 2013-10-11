@@ -237,11 +237,31 @@ def test_ws():
 	two = gws( options.ws )
 	test( one, two )
 
+def test_unix_tcp():
+	print "Testing UNIX Sockets (%s) and TCP Sockets (%s) mixed" % ( options.unix, options.tcp )
+	one = gunix( options.unix )
+	two = gtcp( options.tcp )
+	test( one, two )
+
+def test_unix_ws():
+	print "Testing UNIX Sockets (%s) and WebSockets (%s) mixed" % ( options.unix, options.ws )
+	one = gunix( options.unix )
+	two = gws( options.ws )
+	test( one, two )
+
+def test_tcp_ws():
+	print "Testing TCP Sockets (%s) and WebSockets (%s) mixed" % ( options.tcp, options.ws )
+	one = gtcp( options.tcp )
+	two = gws( options.ws )
+	test( one, two )
 
 def test_all():
 	test_unix()
 	test_tcp()
 	test_ws()
+	test_unix_tcp()
+	test_unix_ws()
+	test_tcp_ws()
 
 ok = u"\t\t\033[92m\u2713\033[0m\t"
 no = u"\t\t\033[91m\u2717\033[0m\t"
